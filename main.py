@@ -26,5 +26,13 @@ def read_root():
 @app.post("/users/{username}/{password}")
 def add_user(username: str, password: str):
     cur.execute(t" INSERT INTO users (username, password) VALUES ({username}), ({password})")
-    return{"users": "User"}
+    user = cur.fetchone()
+    return{"users": user}
+
+@app.get('/users')
+def get_users():
+    cur.execute(t"SELECT * FROM users")
+    users = cur.fetchall()
+    return {"users", users}
+
 
