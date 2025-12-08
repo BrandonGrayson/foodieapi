@@ -40,6 +40,6 @@ def add_user(user: User):
 def get_users():
     cur.execute(t"SELECT * FROM users")
     users = cur.fetchall()
-    return {"users", users}
+    return {"users": users}
 
 
