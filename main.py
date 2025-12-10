@@ -7,6 +7,7 @@ from psycopg_pool import ConnectionPool
 from pydantic import BaseModel
 import time
 from fastapi import HTTPException, status
+from schemas import FoodRes
 
 app = FastAPI()
 
@@ -45,7 +46,7 @@ def add_user(user: User):
     new_user = cur.fetchone()
 
     conn.commit()
-    return{"users": new_user}
+    return new_user
 
 @app.get('/users/{id}', status_code=200)
 def get_users(id: int):
@@ -55,17 +56,17 @@ def get_users(id: int):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"user with id: {id} was not found")
     return {"users": users}
 
-@app.post("/foods", status_code=201)
+@app.post("/foods", status_code=201, response_model=FoodRes)
 def add_food(food: Food):
-    cur.execute("INSERT INTO foods (name, description, location, grade, type, image) VALUES (%s, %s, %s, %s, %s, %s) RETURNING *",
-                (food.name, food.description, food.location, food.grade, food.type, food.image))
+    cur.execute("INSERT INTO foods (description, location, grade, type, image, name) VALUES (%s, %s, %s, %s, %s, %s) RETURNING *",
+                (food.description, food.location, food.grade, food.type, food.image, food.name))
     new_food = cur.fetchone()
 
 
     conn.commit()
-    return{"users": new_food}
+    return new_food
 
-@app.get('/foods/{id}', status_code=200)
+@app.get('/foods/{id}', status_code=200,)
 def get_foods(id: str):
     cur.execute("SELECT * FROM foods WHERE id = %s", (str(id), ))
     foods = cur.fetchone()
@@ -73,6 +74,6 @@ def get_foods(id: str):
     if foods == None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="food with an id: {id} was not found")
 
-    return{"foods": foods}
+    return foods
 
 
