@@ -19,6 +19,8 @@ class Food(BaseModel):
     location: str
     grade: int
     type: str
+    user_id: str
+    image: str  
 
 while True:
     try:
@@ -29,7 +31,7 @@ while True:
 
     except Exception as e:
         print('Connection error', e)
-        time.sleep(23)
+        time.sleep(2)
 
 @app.get("/")
 def read_root():
@@ -51,10 +53,17 @@ def get_users():
 
 @app.post("/foods", status_code=201)
 def add_food(food: Food):
-    cur.execute("INSERT INTO foods (name, description, location, grade, type) VALUES (%s, %s, %s, %s, %s) RETURNING *",
-                (food.name, food.description, food.location, food.grade, food.type))
+    cur.execute("INSERT INTO foods (name, description, location, grade, type, user_id, image) VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING *",
+                (food.name, food.description, food.location, food.grade, food.type, food.user_id, food.image))
     new_food = cur.fetchone()
     conn.commit()
     return{"users": new_food}
+
+@app.get('/foods/user_id', status_code=200)
+def get_foods(user_id: int):
+    cur.execute("SELECT * FROM foods WHERE user_id = %s", str((user_id)))
+    foods = cur.fetchall()
+
+    return{"foods": foods}
 
 
