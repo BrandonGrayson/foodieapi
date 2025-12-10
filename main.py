@@ -7,22 +7,9 @@ from psycopg_pool import ConnectionPool
 from pydantic import BaseModel
 import time
 from fastapi import HTTPException, status
-from schemas import FoodRes
+from schemas import FoodBase, UserBase, FoodCreate
 
 app = FastAPI()
-
-class User(BaseModel):
-    id: int
-    username: str
-    password: str
-
-class Food(BaseModel):
-    name: str
-    description: str
-    location: str
-    grade: int
-    type: str
-    image: str  
 
 while True:
     try:
@@ -40,9 +27,9 @@ def read_root():
     return {"Hello": "World"}
 
 @app.post("/users", status_code=201)
-def add_user(user: User):
-    cur.execute("INSERT INTO users (username, password) VALUES (%s, %s) RETURNING *",
-            (user.username, user.password))
+def add_user(user: UserBase):
+    cur.execute("INSERT INTO users (email, password) VALUES (%s, %s) RETURNING *",
+            (user.email, user.password))
     new_user = cur.fetchone()
 
     conn.commit()
@@ -56,17 +43,16 @@ def get_users(id: int):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"user with id: {id} was not found")
     return {"users": users}
 
-@app.post("/foods", status_code=201, response_model=FoodRes)
-def add_food(food: Food):
+@app.post("/foods", status_code=201, response_model=FoodCreate)
+def add_food(food: FoodBase):
     cur.execute("INSERT INTO foods (description, location, grade, type, image, name) VALUES (%s, %s, %s, %s, %s, %s) RETURNING *",
                 (food.description, food.location, food.grade, food.type, food.image, food.name))
     new_food = cur.fetchone()
 
-
     conn.commit()
     return new_food
 
-@app.get('/foods/{id}', status_code=200,)
+@app.get('/foods/{id}', status_code=200)
 def get_foods(id: str):
     cur.execute("SELECT * FROM foods WHERE id = %s", (str(id), ))
     foods = cur.fetchone()
