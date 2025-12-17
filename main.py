@@ -11,7 +11,33 @@ from schemas import FoodBase, UserBase, FoodCreate, User, UserOut
 from pwdlib import PasswordHash
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 import jwt
+from fastapi import Depends, FastAPI, HTTPException, Query
+from sqlmodel import Field, Session, SQLModel, create_engine, select
+from pydantic import BaseModel, EmailStr
 
+class foods(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    name: str
+    description: str
+    location: str
+    type: str
+    grade: int
+    created_at: datetime
+    image: str
+    user_id: int = Field(default=None, foreign_key="user.id")
+
+class users(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    username: EmailStr
+    password: str
+
+SQLMODEL_DATABASE_URL = "postgresql+psycopg://postgres:Prolific1@localhost/foodie"
+
+engine = create_engine(SQLMODEL_DATABASE_URL, echo=True)
+
+SQLModel.metadata.create_all(engine)
+
+session = Session(engine)
 
 # to get a string like this run:
 # openssl rand -hex 32

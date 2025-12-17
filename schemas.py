@@ -30,3 +30,5 @@ class FoodCreate(FoodBase):
 
     class Config:
         from_attributes = True
+
+
