@@ -116,14 +116,15 @@ def add_food(food: FoodRead, session: SessionDep):
 
     return db_Foods
 
-# @app.get('/foods/{id}', status_code=200)
-# def get_foods(id: str, session: SessionDep):
-#     cur.execute("SELECT * FROM foods WHERE id = %s", (str(id), ))
-#     foods = cur.fetchone()
+@app.get('/foods/{id}', status_code=200, response_model=FoodRead)
+def get_foods(id: int, session: SessionDep):
 
-#     if foods == None:
-#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="food with an id: {id} was not found")
+    statement = select(Foods).where(Foods.id == id)
+    food = session.exec(statement).first()
 
-#     return foods
+    if not food:
+        raise HTTPException(status_code=404, detail="Food not found")
+
+    return food
 
 
