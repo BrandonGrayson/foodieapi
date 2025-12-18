@@ -79,16 +79,16 @@ def hash(password):
 def on_startup():
     create_db_and_tables()
 
-while True:
-    try:
-        conn = psycopg.connect(host="localhost", dbname="foodie", user='postgres', password='Prolific1',  row_factory=dict_row) 
-        cur= conn.cursor() 
-        print('database connection successful')
-        break
+# while True:
+#     try:
+#         conn = psycopg.connect(host="localhost", dbname="foodie", user='postgres', password='Prolific1',  row_factory=dict_row) 
+#         cur= conn.cursor() 
+#         print('database connection successful')
+#         break
 
-    except Exception as e:
-        print('Connection error', e)
-        time.sleep(2)
+#     except Exception as e:
+#         print('Connection error', e)
+#         time.sleep(2)
 
 @app.get("/")
 def read_root():
@@ -105,13 +105,17 @@ def add_user(user: UserCreate, session: SessionDep):
 
     return db_user
 
-# @app.get('/users/{id}', status_code=200, response_model=UserOut)
-# def get_user(id: int, session: SessionDep):
-#     cur.execute("SELECT * FROM users WHERE id = %s", (str(id), ))
-#     user = cur.fetchone()
-#     if user == None:
-#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"user with id: {id} was not found")
-#     return user
+@app.get('/users/{id}', status_code=200, response_model=UserRead)
+def get_user(id: int, session: SessionDep):
+    
+    statment = select(Users).where(Users.id == id)
+    user = session.exec(statment).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return user
+    
 
 # @app.post("/foods", status_code=201, response_model=FoodCreate)
 # def add_food(food: FoodBase, session: SessionDep):
