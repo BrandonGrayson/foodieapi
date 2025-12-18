@@ -31,6 +31,29 @@ class Foods(SQLModel, table=True):
     location: str
     type: str
     grade: int
-    created_at: datetime
+    created_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(
+            DateTime(timezone=True),
+            server_default=func.now()
+        )
+    ) 
+    image: str
+    user_id: int = Field(default=None, foreign_key="users.id")
+
+class FoodRead(SQLModel):
+    id: int | None = Field(default=None, primary_key=True)
+    name: str
+    description: str
+    location: str
+    type: str
+    grade: int
     image: str
     user_id: int = Field(default=None, foreign_key="user.id")
+    created_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(
+            DateTime(timezone=True),
+            server_default=func.now()
+        )
+    ) 

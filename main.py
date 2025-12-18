@@ -1,13 +1,11 @@
 from typing import Annotated
 from datetime import datetime, timedelta, timezone
 from fastapi import FastAPI
-import psycopg
 from psycopg.rows import dict_row
 from pydantic import BaseModel
-import time
 from fastapi import HTTPException, status
 from schemas import FoodBase, FoodCreate
-from models import Users, UserCreate, UserRead
+from models import Users, UserCreate, UserRead, FoodRead, Foods
 from pwdlib import PasswordHash
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 import jwt
@@ -79,16 +77,6 @@ def hash(password):
 def on_startup():
     create_db_and_tables()
 
-# while True:
-#     try:
-#         conn = psycopg.connect(host="localhost", dbname="foodie", user='postgres', password='Prolific1',  row_factory=dict_row) 
-#         cur= conn.cursor() 
-#         print('database connection successful')
-#         break
-
-#     except Exception as e:
-#         print('Connection error', e)
-#         time.sleep(2)
 
 @app.get("/")
 def read_root():
@@ -117,14 +105,16 @@ def get_user(id: int, session: SessionDep):
     return user
     
 
-# @app.post("/foods", status_code=201, response_model=FoodCreate)
-# def add_food(food: FoodBase, session: SessionDep):
-#     cur.execute("INSERT INTO foods (description, location, grade, type, image, name) VALUES (%s, %s, %s, %s, %s, %s) RETURNING *",
-#                 (food.description, food.location, food.grade, food.type, food.image, food.name))
-#     new_food = cur.fetchone()
+@app.post("/foods", status_code=201, response_model=FoodRead)
+def add_food(food: FoodRead, session: SessionDep):
 
-#     conn.commit()
-#     return new_food
+    db_Foods = Foods(**food.model_dump())
+
+    session.add(db_Foods)
+    session.commit()
+    session.refresh(db_Foods)
+
+    return db_Foods
 
 # @app.get('/foods/{id}', status_code=200)
 # def get_foods(id: str, session: SessionDep):
