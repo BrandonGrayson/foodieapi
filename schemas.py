@@ -1,11 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
-from sqlmodel import Field, SQLModel
 
-class User(SQLModel, table=True):
-    id: int = Field(default=None, primary_key=True)
-    email: EmailStr
-    password: str
 
 class UserBase(BaseModel):
     email: EmailStr

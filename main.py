@@ -1,37 +1,20 @@
-from typing import Union, Annotated
+from typing import Annotated
 from datetime import datetime, timedelta, timezone
 from fastapi import FastAPI
 import psycopg
 from psycopg.rows import dict_row
-from psycopg_pool import ConnectionPool
 from pydantic import BaseModel
 import time
 from fastapi import HTTPException, status
-from schemas import FoodBase, UserBase, FoodCreate, User, UserOut
+from schemas import FoodBase, FoodCreate
+from models import Users, UserCreate, UserRead
 from pwdlib import PasswordHash
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 import jwt
 from fastapi import Depends, FastAPI, HTTPException, Query
 from sqlmodel import Field, Session, SQLModel, create_engine, select
-from pydantic import BaseModel, EmailStr
 
 app = FastAPI()
-
-class foods(SQLModel, table=True):
-    id: int | None = Field(default=None, primary_key=True)
-    name: str
-    description: str
-    location: str
-    type: str
-    grade: int
-    created_at: datetime
-    image: str
-    user_id: int = Field(default=None, foreign_key="user.id")
-
-class users(SQLModel, table=True):
-    id: int | None = Field(default=None, primary_key=True)
-    username: EmailStr
-    password: str
 
 SQLMODEL_DATABASE_URL = "postgresql+psycopg://postgres:Prolific1@localhost/foodie"
 
@@ -111,46 +94,42 @@ while True:
 def read_root():
     return {"Hello": "World"}
 
-@app.post("/users", status_code=201)
-def add_user(user: User, session: SessionDep):
+@app.post("/users", status_code=201, response_model=UserRead)
+def add_user(user: UserCreate, session: SessionDep):
 
-    session.add(user)
+    db_user = Users(**user.model_dump())
+
+    session.add(db_user)
     session.commit()
-    session.refresh(user)
+    session.refresh(db_user)
 
-    # hashed_password = hash(user.password)
-    # cur.execute("INSERT INTO users (email, password) VALUES (%s, %s) RETURNING *",
-    #         (user.email, hashed_password ))
-    # new_user = cur.fetchone()
+    return db_user
 
-    # conn.commit()
-    return user
+# @app.get('/users/{id}', status_code=200, response_model=UserOut)
+# def get_user(id: int, session: SessionDep):
+#     cur.execute("SELECT * FROM users WHERE id = %s", (str(id), ))
+#     user = cur.fetchone()
+#     if user == None:
+#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"user with id: {id} was not found")
+#     return user
 
-@app.get('/users/{id}', status_code=200, response_model=UserOut)
-def get_user(id: int, session: SessionDep):
-    cur.execute("SELECT * FROM users WHERE id = %s", (str(id), ))
-    user = cur.fetchone()
-    if user == None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"user with id: {id} was not found")
-    return user
+# @app.post("/foods", status_code=201, response_model=FoodCreate)
+# def add_food(food: FoodBase, session: SessionDep):
+#     cur.execute("INSERT INTO foods (description, location, grade, type, image, name) VALUES (%s, %s, %s, %s, %s, %s) RETURNING *",
+#                 (food.description, food.location, food.grade, food.type, food.image, food.name))
+#     new_food = cur.fetchone()
 
-@app.post("/foods", status_code=201, response_model=FoodCreate)
-def add_food(food: FoodBase, session: SessionDep):
-    cur.execute("INSERT INTO foods (description, location, grade, type, image, name) VALUES (%s, %s, %s, %s, %s, %s) RETURNING *",
-                (food.description, food.location, food.grade, food.type, food.image, food.name))
-    new_food = cur.fetchone()
+#     conn.commit()
+#     return new_food
 
-    conn.commit()
-    return new_food
+# @app.get('/foods/{id}', status_code=200)
+# def get_foods(id: str, session: SessionDep):
+#     cur.execute("SELECT * FROM foods WHERE id = %s", (str(id), ))
+#     foods = cur.fetchone()
 
-@app.get('/foods/{id}', status_code=200)
-def get_foods(id: str, session: SessionDep):
-    cur.execute("SELECT * FROM foods WHERE id = %s", (str(id), ))
-    foods = cur.fetchone()
+#     if foods == None:
+#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="food with an id: {id} was not found")
 
-    if foods == None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="food with an id: {id} was not found")
-
-    return foods
+#     return foods
 
 
