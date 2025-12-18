@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Annotated
 from datetime import datetime, timedelta, timezone
 from fastapi import FastAPI
 import psycopg
@@ -14,6 +14,8 @@ import jwt
 from fastapi import Depends, FastAPI, HTTPException, Query
 from sqlmodel import Field, Session, SQLModel, create_engine, select
 from pydantic import BaseModel, EmailStr
+
+app = FastAPI()
 
 class foods(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
@@ -35,9 +37,16 @@ SQLMODEL_DATABASE_URL = "postgresql+psycopg://postgres:Prolific1@localhost/foodi
 
 engine = create_engine(SQLMODEL_DATABASE_URL, echo=True)
 
-SQLModel.metadata.create_all(engine)
+def create_db_and_tables():
+    SQLModel.metadata.create_all(engine)
 
-session = Session(engine)
+# session = Session(engine)
+def get_session():
+    with Session(engine) as session:
+        yield session
+
+
+SessionDep = Annotated[Session, Depends(get_session)]
 
 # to get a string like this run:
 # openssl rand -hex 32
@@ -74,6 +83,8 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
 #         return False
 #     return user
 
+#password hashing
+
 def verify_password(plain_password, hashed_password):
     return password_hash.verify(plain_password, hashed_password)
 
@@ -81,7 +92,9 @@ def verify_password(plain_password, hashed_password):
 def hash(password):
     return password_hash.hash(password)
 
-app = FastAPI()
+@app.on_event("startup")
+def on_startup():
+    create_db_and_tables()
 
 while True:
     try:
@@ -99,18 +112,22 @@ def read_root():
     return {"Hello": "World"}
 
 @app.post("/users", status_code=201)
-def add_user(user: UserBase):
+def add_user(user: User, session: SessionDep):
 
-    hashed_password = hash(user.password)
-    cur.execute("INSERT INTO users (email, password) VALUES (%s, %s) RETURNING *",
-            (user.email, hashed_password ))
-    new_user = cur.fetchone()
+    session.add(user)
+    session.commit()
+    session.refresh(user)
 
-    conn.commit()
-    return new_user
+    # hashed_password = hash(user.password)
+    # cur.execute("INSERT INTO users (email, password) VALUES (%s, %s) RETURNING *",
+    #         (user.email, hashed_password ))
+    # new_user = cur.fetchone()
+
+    # conn.commit()
+    return user
 
 @app.get('/users/{id}', status_code=200, response_model=UserOut)
-def get_user(id: int):
+def get_user(id: int, session: SessionDep):
     cur.execute("SELECT * FROM users WHERE id = %s", (str(id), ))
     user = cur.fetchone()
     if user == None:
@@ -118,7 +135,7 @@ def get_user(id: int):
     return user
 
 @app.post("/foods", status_code=201, response_model=FoodCreate)
-def add_food(food: FoodBase):
+def add_food(food: FoodBase, session: SessionDep):
     cur.execute("INSERT INTO foods (description, location, grade, type, image, name) VALUES (%s, %s, %s, %s, %s, %s) RETURNING *",
                 (food.description, food.location, food.grade, food.type, food.image, food.name))
     new_food = cur.fetchone()
@@ -127,7 +144,7 @@ def add_food(food: FoodBase):
     return new_food
 
 @app.get('/foods/{id}', status_code=200)
-def get_foods(id: str):
+def get_foods(id: str, session: SessionDep):
     cur.execute("SELECT * FROM foods WHERE id = %s", (str(id), ))
     foods = cur.fetchone()
 
