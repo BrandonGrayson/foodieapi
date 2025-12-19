@@ -118,9 +118,9 @@ def get_foods(id: int, session: SessionDep):
     return food
 
 @app.post("/login")
-def login(user_credentials: schemas.UserBase, session: SessionDep):
+def login(user_credentials: Annotated[OAuth2PasswordRequestForm, Depends()], session: SessionDep):
 
-   statement = select(Users).where(Users.email == user_credentials.email)
+   statement = select(Users).where(Users.email == user_credentials.username)
    user = session.exec(statement).first()
 
    if not user:
