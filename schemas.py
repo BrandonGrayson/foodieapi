@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
+from typing import Optional
 
 
 class UserBase(BaseModel):
@@ -35,4 +36,12 @@ class FoodCreate(FoodBase):
     class Config:
         from_attributes = True
 
+class Token(BaseModel):
+    access_token: str
+    token_type: str
 
+    class Config:
+        from_attributes = True
+
+class TokenData(BaseModel):
+    id: Optional[str] = None

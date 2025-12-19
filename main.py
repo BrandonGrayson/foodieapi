@@ -1,16 +1,16 @@
 from typing import Annotated
 from datetime import datetime, timedelta, timezone
 from fastapi import FastAPI
-from psycopg.rows import dict_row
 from pydantic import BaseModel
 from fastapi import HTTPException, status
-import schemas
 from models import Users, UserCreate, UserRead, FoodRead, Foods
 from pwdlib import PasswordHash
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 import jwt
 from fastapi import Depends, FastAPI, HTTPException
 from sqlmodel import Session, SQLModel, create_engine, select
+import schemas
+from jwt import PyJWTError
 
 app = FastAPI()
 
@@ -35,7 +35,7 @@ SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
 ALGORITHM = "HS256"
 
 password_hash = PasswordHash.recommended()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # class UserInDB(User):
@@ -60,6 +60,26 @@ def verify_password(plain_password, hashed_password):
 
 def hash(password):
     return password_hash.hash(password)
+
+def verify_access_token(token: str, credentials_exception):
+
+    try: 
+        payload = jwt.decode(token, SECRET_KEY, algorithms=ALGORITHM)
+        id: str = payload.get("users_id")
+
+        if id is None:
+            raise credentials_exception
+    
+        token_data = schemas.TokenData(id=id)
+    except PyJWTError:
+        raise credentials_exception
+    
+    return token_data
+
+def get_access_token(token: str = Depends(oauth2_scheme)):
+    credentials_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials", headers={"WWW-Authenticate": "Bearer"})
+
+    return verify_access_token(token, credentials_exception)
 
 @app.on_event("startup")
 def on_startup():
@@ -132,21 +152,3 @@ def login(user_credentials: Annotated[OAuth2PasswordRequestForm, Depends()], ses
    access_token = create_access_token(data = {"user_id": user.id})
    
    return {"access_token": access_token, "token_type": "bearer"}
-
-# @app.post("/token")
-# async def login_for_access_token(
-#     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-# ) -> Token:
-#     user = authenticate_user(fake_users_db, form_data.username, form_data.password)
-#     if not user:
-#         raise HTTPException(
-#             status_code=status.HTTP_401_UNAUTHORIZED,
-#             detail="Incorrect username or password",
-#             headers={"WWW-Authenticate": "Bearer"},
-#         )
-#     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-#     access_token = create_access_token(
-#         data={"sub": user.username}, expires_delta=access_token_expires
-#     )
-
-
