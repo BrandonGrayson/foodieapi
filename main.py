@@ -4,13 +4,13 @@ from fastapi import FastAPI
 from psycopg.rows import dict_row
 from pydantic import BaseModel
 from fastapi import HTTPException, status
-from schemas import FoodBase, FoodCreate
+import schemas
 from models import Users, UserCreate, UserRead, FoodRead, Foods
 from pwdlib import PasswordHash
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 import jwt
-from fastapi import Depends, FastAPI, HTTPException, Query
-from sqlmodel import Field, Session, SQLModel, create_engine, select
+from fastapi import Depends, FastAPI, HTTPException
+from sqlmodel import Session, SQLModel, create_engine, select
 
 app = FastAPI()
 
@@ -41,30 +41,18 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 # class UserInDB(User):
 #     hashed_password: str
 
-def create_access_token(data: dict, expires_delta: timedelta | None = None):
+def create_access_token(data: dict):
     to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=15)
+
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-# def get_user(db, username: str):
-#     if username in db:
-#         user_dict = db[username]
-#         return UserInDB(**user_dict)
-
-# def authenticate_user(fake_db, username: str, password: str):
-#     user = get_user(fake_db, username)
-#     if not user:
-#         return False
-#     if not verify_password(password, user.hashed_password):
-#         return False
-#     return user
-
-#password hashing
+class Token(BaseModel):
+    access_token: str
+    token_type: str
 
 def verify_password(plain_password, hashed_password):
     return password_hash.verify(plain_password, hashed_password)
@@ -85,7 +73,9 @@ def read_root():
 @app.post("/users", status_code=201, response_model=UserRead)
 def add_user(user: UserCreate, session: SessionDep):
 
-    db_user = Users(**user.model_dump())
+    hashed_password = hash(user.password)
+
+    db_user = Users(email=user.email, password=hashed_password)
 
     session.add(db_user)
     session.commit()
@@ -96,11 +86,11 @@ def add_user(user: UserCreate, session: SessionDep):
 @app.get('/users/{id}', status_code=200, response_model=UserRead)
 def get_user(id: int, session: SessionDep):
     
-    statment = select(Users).where(Users.id == id)
-    user = session.exec(statment).first()
+    statement = select(Users).where(Users.id == id)
+    user = session.exec(statement).first()
 
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     return user
     
@@ -123,8 +113,40 @@ def get_foods(id: int, session: SessionDep):
     food = session.exec(statement).first()
 
     if not food:
-        raise HTTPException(status_code=404, detail="Food not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Food not found")
 
     return food
+
+@app.post("/login")
+def login(user_credentials: schemas.UserBase, session: SessionDep):
+
+   statement = select(Users).where(Users.email == user_credentials.email)
+   user = session.exec(statement).first()
+
+   if not user:
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid Credentials")
+   
+   if not verify_password(user_credentials.password, user.password):
+       raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid Credentials")
+   
+   access_token = create_access_token(data = {"user_id": user.id})
+   
+   return {"access_token": access_token, "token_type": "bearer"}
+
+# @app.post("/token")
+# async def login_for_access_token(
+#     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+# ) -> Token:
+#     user = authenticate_user(fake_users_db, form_data.username, form_data.password)
+#     if not user:
+#         raise HTTPException(
+#             status_code=status.HTTP_401_UNAUTHORIZED,
+#             detail="Incorrect username or password",
+#             headers={"WWW-Authenticate": "Bearer"},
+#         )
+#     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+#     access_token = create_access_token(
+#         data={"sub": user.username}, expires_delta=access_token_expires
+#     )
 
 
