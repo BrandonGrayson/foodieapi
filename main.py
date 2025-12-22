@@ -26,7 +26,6 @@ def get_session():
     with Session(engine) as session:
         yield session
 
-
 SessionDep = Annotated[Session, Depends(get_session)]
 
 # to get a string like this run:
@@ -61,11 +60,30 @@ def verify_password(plain_password, hashed_password):
 def hash(password):
     return password_hash.hash(password)
 
+# async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
+#     credentials_exception = HTTPException(
+#         status_code=status.HTTP_401_UNAUTHORIZED,
+#         detail="Could not validate credentials",
+#         headers={"WWW-Authenticate": "Bearer"},
+#     )
+#     try:
+#         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+#         username = payload.get("sub")
+#         if username is None:
+#             raise credentials_exception
+#         token_data = TokenData(username=username)
+#     except InvalidTokenError:
+#         raise credentials_exception
+#     user = get_user(fake_users_db, username=token_data.username)
+#     if user is None:
+#         raise credentials_exception
+#     return user
+
 def verify_access_token(token: str, credentials_exception):
 
     try: 
-        payload = jwt.decode(token, SECRET_KEY, algorithms=ALGORITHM)
-        id: str = payload.get("users_id")
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        id: int = payload.get("user_id")
 
         if id is None:
             raise credentials_exception
@@ -73,10 +91,12 @@ def verify_access_token(token: str, credentials_exception):
         token_data = schemas.TokenData(id=id)
     except PyJWTError:
         raise credentials_exception
+    except AssertionError as e:
+        print(e)
     
-    return token_data
+    return token_data.id
 
-def get_access_token(token: str = Depends(oauth2_scheme)):
+def get_current_user(token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials", headers={"WWW-Authenticate": "Bearer"})
 
     return verify_access_token(token, credentials_exception)
@@ -116,9 +136,11 @@ def get_user(id: int, session: SessionDep):
     
 
 @app.post("/foods", status_code=201, response_model=FoodRead)
-def add_food(food: FoodRead, session: SessionDep):
+def add_food(food: schemas.FoodCreate, session: SessionDep, user_id: int = Depends(get_current_user)):
 
-    db_Foods = Foods(**food.model_dump())
+    print(user_id)
+
+    db_Foods = Foods(**food.model_dump(), user_id=user_id)
 
     session.add(db_Foods)
     session.commit()
@@ -144,10 +166,10 @@ def login(user_credentials: Annotated[OAuth2PasswordRequestForm, Depends()], ses
    user = session.exec(statement).first()
 
    if not user:
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid Credentials")
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid Credentials")
    
    if not verify_password(user_credentials.password, user.password):
-       raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid Credentials")
+       raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid Credentials")
    
    access_token = create_access_token(data = {"user_id": user.id})
    

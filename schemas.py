@@ -44,4 +44,4 @@ class Token(BaseModel):
         from_attributes = True
 
 class TokenData(BaseModel):
-    id: Optional[str] = None
+    id: Optional[int] = None
