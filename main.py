@@ -8,10 +8,12 @@ from sqlmodel import Session, SQLModel, create_engine, select
 import schemas
 import oauth
 import utils
+from config import settings
 
 app = FastAPI()
 
-SQLMODEL_DATABASE_URL = "postgresql+psycopg://postgres:Prolific1@localhost/foodie"
+# SQLMODEL_DATABASE_URL = "postgresql+psycopg://postgres:Prolific1@localhost:/foodie"
+SQLMODEL_DATABASE_URL = f"postgresql+psycopg://{settings.database_username}:{settings.database_password}@{settings.database_hostname}:{settings.database_port}/{settings.database_name}"
 
 engine = create_engine(SQLMODEL_DATABASE_URL, echo=True)
 
