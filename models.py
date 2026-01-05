@@ -6,10 +6,14 @@ from sqlalchemy import Column, DateTime, func
 class UserCreate(SQLModel):
     email: EmailStr
     password: str
+    full_name: str
+    phone_number: str
+    user_name: str
 
 class UserRead(SQLModel):
     id: int
     email: EmailStr
+    user_name: str
     created_at: datetime
 
 class Users(SQLModel, table=True):
@@ -23,6 +27,9 @@ class Users(SQLModel, table=True):
             server_default=func.now()
         )
     ) 
+    phone_number: str
+    full_name: str
+    user_name: str
 
 class Foods(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)

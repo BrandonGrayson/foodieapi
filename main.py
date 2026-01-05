@@ -9,8 +9,22 @@ import schemas
 import oauth
 import utils
 from config import settings
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+origins = [
+    "http://localhost",
+    "http://localhost:3000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # SQLMODEL_DATABASE_URL = "postgresql+psycopg://postgres:Prolific1@localhost:/foodie"
 SQLMODEL_DATABASE_URL = f"postgresql+psycopg://{settings.database_username}:{settings.database_password}@{settings.database_hostname}:{settings.database_port}/{settings.database_name}"
@@ -42,11 +56,11 @@ def read_root():
     return {"Hello": "World"}
 
 @app.post("/users", status_code=201, response_model=UserRead)
-def add_user(user: UserCreate, session: SessionDep, user_id: int = Depends(get_current_user)):
+def add_user(user: UserCreate, session: SessionDep):
 
     hashed_password = utils.hash(user.password)
 
-    db_user = Users(email=user.email, password=hashed_password)
+    db_user = Users(email=user.email, password=hashed_password, phone_number=user.phone_number, full_name=user.full_name,  user_name=user.user_name)
 
     session.add(db_user)
     session.commit()
@@ -104,6 +118,8 @@ def delete_food(id: int, session: SessionDep, user_id: int = Depends(get_current
 
 @app.post("/login", response_model=schemas.Token)
 def login(user_credentials: Annotated[OAuth2PasswordRequestForm, Depends()], session: SessionDep):
+   
+   print('user creds', user_credentials)
 
    statement = select(Users).where(Users.email == user_credentials.username)
    user = session.exec(statement).first()
