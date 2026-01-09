@@ -3,13 +3,14 @@ from fastapi import FastAPI
 from fastapi import HTTPException, status
 from models import Users, UserCreate, UserRead, FoodRead, Foods
 from fastapi.security import OAuth2PasswordRequestForm
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Cookie, Response
 from sqlmodel import Session, SQLModel, create_engine, select
 import schemas
 import oauth
 import utils
 from config import settings
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 
 app = FastAPI()
 
@@ -40,11 +41,15 @@ def get_session():
         yield session
 
 SessionDep = Annotated[Session, Depends(get_session)]
+#token: str = Depends(oauth.oauth2_scheme)
+def get_current_user(access_token: str | None = Cookie(default=None)):
+    credentials_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
 
-def get_current_user(token: str = Depends(oauth.oauth2_scheme)):
-    credentials_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials", headers={"WWW-Authenticate": "Bearer"})
+    if access_token is None:
+        raise credentials_exception
 
-    return oauth.verify_access_token(token, credentials_exception)
+    return oauth.verify_access_token(access_token, credentials_exception)
+
 
 @app.on_event("startup")
 def on_startup():
@@ -115,8 +120,7 @@ def delete_food(id: int, session: SessionDep, user_id: int = Depends(get_current
 
     return food
 
-
-@app.post("/login", response_model=schemas.Token)
+@app.post("/login")
 def login(user_credentials: Annotated[OAuth2PasswordRequestForm, Depends()], session: SessionDep):
    
    print('user creds', user_credentials)
@@ -131,8 +135,30 @@ def login(user_credentials: Annotated[OAuth2PasswordRequestForm, Depends()], ses
        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid Credentials")
    
    access_token = oauth.create_access_token(data = {"user_id": user.id})
+
+   response = RedirectResponse(
+        url="http://localhost:3000/profile",
+        status_code=303,
+    )
    
-   return {"access_token": access_token, "token_type": "bearer"}
+   response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=False,          # true in production
+        samesite="lax",       # or "strict"
+        max_age=60 * 30
+    )
+   
+   return response
 
-
-
+@app.get("/me", response_model=UserRead)
+def read_me(
+    session: SessionDep,
+    user_id: int = Depends(get_current_user)
+):
+    user = session.get(Users, user_id)
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user

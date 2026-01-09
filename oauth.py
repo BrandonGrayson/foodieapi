@@ -5,7 +5,7 @@ import schemas
 from jwt import PyJWTError
 from config import settings
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 # to get a string like this run:
 # openssl rand -hex 32
