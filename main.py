@@ -10,7 +10,7 @@ import oauth
 import utils
 from config import settings
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse
 
 app = FastAPI()
 
@@ -121,7 +121,7 @@ def delete_food(id: int, session: SessionDep, user_id: int = Depends(get_current
     return food
 
 @app.post("/login")
-def login(user_credentials: Annotated[OAuth2PasswordRequestForm, Depends()], session: SessionDep):
+def login(user_credentials: Annotated[OAuth2PasswordRequestForm, Depends()], session: SessionDep, response: Response):
    
    print('user creds', user_credentials)
 
@@ -135,22 +135,18 @@ def login(user_credentials: Annotated[OAuth2PasswordRequestForm, Depends()], ses
        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid Credentials")
    
    access_token = oauth.create_access_token(data = {"user_id": user.id})
-
-   response = RedirectResponse(
-        url="http://localhost:3000/profile",
-        status_code=303,
-    )
    
    response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=False,          # true in production
-        samesite="lax",       # or "strict"
-        max_age=60 * 30
+        secure=False,     # ✅ dev only
+        samesite="lax",   # ✅ SAME SITE = localhost
+        max_age=60 * 30,
+        path="/"
     )
    
-   return response
+   return {"message": "Login successful"}
 
 @app.get("/me", response_model=UserRead)
 def read_me(
