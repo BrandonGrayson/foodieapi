@@ -10,7 +10,8 @@ import oauth
 import utils
 from config import settings
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+import boto3
+import os
 
 app = FastAPI()
 
@@ -59,6 +60,33 @@ def on_startup():
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
+
+@app.get('/foodieitems')
+def get_food_items():
+
+    print("AWS_ACCESS_KEY_ID:", settings.AWS_ACCESS_KEY_ID)
+    print("AWS_SECRET_ACCESS_KEY:", settings.AWS_SECRET_ACCESS_KEY)
+    print("AWS_REGION:", settings.AWS_REGION)
+    s3 = boto3.client(
+        "s3",
+    region_name=settings.AWS_REGION,
+    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+        )
+
+    bucket_name = "foodieitems"
+
+    paginator = s3.get_paginator("list_objects_v2")
+
+    objects = []
+
+    for page in paginator.paginate(Bucket=bucket_name):
+        for obj in page.get("Contents", []):
+            objects.append(obj)
+
+    return objects
+
+    return "hello"
 
 @app.post("/users", status_code=201, response_model=UserRead)
 def add_user(user: UserCreate, session: SessionDep):
