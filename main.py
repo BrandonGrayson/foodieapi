@@ -100,8 +100,6 @@ async def upload_food_items(user_id: int = Depends(get_current_user), file: Uplo
     }
 
 
-
-
 @app.get('/foodieitems')
 def get_all_food_items():
 
