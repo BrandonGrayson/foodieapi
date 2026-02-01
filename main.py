@@ -11,7 +11,8 @@ import utils
 from config import settings
 from fastapi.middleware.cors import CORSMiddleware
 import boto3
-import os
+import uuid
+from fastapi import UploadFile, File
 
 app = FastAPI()
 
@@ -61,8 +62,48 @@ def on_startup():
 def read_root():
     return {"Hello": "World"}
 
+@app.post('/uploadfood')
+async def upload_food_items(user_id: int = Depends(get_current_user), file: UploadFile = File()):
+
+    print("AWS_ACCESS_KEY_ID:", settings.AWS_ACCESS_KEY_ID)
+    print("AWS_SECRET_ACCESS_KEY:", settings.AWS_SECRET_ACCESS_KEY)
+    print("AWS_REGION:", settings.AWS_REGION)
+
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(400, "Only images allowed")
+    
+    contents = await file.read()
+
+    if len(contents) > 5 * 1024 * 1024:
+        raise HTTPException(400, "File too large")
+
+    s3 = boto3.client(
+        "s3",
+    region_name=settings.AWS_REGION,
+    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+    )
+
+    ext = file.filename.split(".")[-1]
+    key = f"users/{user_id}/{uuid.uuid4()}.{ext}"
+
+    s3.put_object(
+    Bucket=settings.AWS_S3_BUCKET_NAME,
+    Key=key,
+    Body=contents,
+    ContentType=file.content_type
+)
+    
+    return {
+        "key": key,
+        "url": f"https://{settings.AWS_S3_BUCKET_NAME}.s3.amazonaws.com/{key}"
+    }
+
+
+
+
 @app.get('/foodieitems')
-def get_food_items():
+def get_all_food_items():
 
     print("AWS_ACCESS_KEY_ID:", settings.AWS_ACCESS_KEY_ID)
     print("AWS_SECRET_ACCESS_KEY:", settings.AWS_SECRET_ACCESS_KEY)
@@ -85,8 +126,6 @@ def get_food_items():
             objects.append(obj)
 
     return objects
-
-    return "hello"
 
 @app.post("/users", status_code=201, response_model=UserRead)
 def add_user(user: UserCreate, session: SessionDep):
