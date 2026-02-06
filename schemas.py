@@ -30,7 +30,7 @@ class FoodBase(BaseModel):
     location: str
     grade: int
     type: str
-    image: str  
+    image_key: str
 
 class FoodCreate(FoodBase):
     pass

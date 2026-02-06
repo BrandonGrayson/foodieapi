@@ -45,7 +45,7 @@ class Foods(SQLModel, table=True):
             server_default=func.now()
         )
     ) 
-    image: str
+    image_key: str
     user_id: int = Field(default=None, foreign_key="users.id")
 
 class FoodRead(SQLModel):
@@ -55,7 +55,7 @@ class FoodRead(SQLModel):
     location: str
     type: str
     grade: int
-    image: str
+    image_key: str
     user_id: int = Field(default=None, foreign_key="user.id")
     created_at: datetime | None = Field(
         default=None,

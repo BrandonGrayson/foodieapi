@@ -1,3 +1,6 @@
+# NOTES & Bugs: 
+# aws signature for images timesout and renders a 500 error to the client
+
 from typing import Annotated
 from fastapi import FastAPI
 from fastapi import HTTPException, status
@@ -57,7 +60,6 @@ def get_current_user(access_token: str | None = Cookie(default=None)):
 def on_startup():
     create_db_and_tables()
 
-
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
@@ -100,8 +102,8 @@ async def upload_food_items(user_id: int = Depends(get_current_user), file: Uplo
     }
 
 
-@app.get('/foodieitems')
-def get_all_food_items():
+@app.get('/listfoodieitems')
+def get_all_food_items(user_id: int = Depends(get_current_user)):
 
     print("AWS_ACCESS_KEY_ID:", settings.AWS_ACCESS_KEY_ID)
     print("AWS_SECRET_ACCESS_KEY:", settings.AWS_SECRET_ACCESS_KEY)
@@ -112,6 +114,8 @@ def get_all_food_items():
     aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
     aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
         )
+    
+    prefix = f"users/{user_id}/"
 
     bucket_name = "foodieitems"
 
@@ -119,9 +123,23 @@ def get_all_food_items():
 
     objects = []
 
-    for page in paginator.paginate(Bucket=bucket_name):
+    for page in paginator.paginate(Bucket=bucket_name, Prefix=prefix):
         for obj in page.get("Contents", []):
-            objects.append(obj)
+            signed_url = s3.generate_presigned_url(
+                "get_object",
+                Params={
+                    "Bucket": settings.AWS_S3_BUCKET_NAME,
+                    "Key": obj["Key"],
+                },
+                ExpiresIn=3600,  # 1 hour
+            )
+            objects.append({
+                "key": obj["Key"],
+                "url": signed_url,
+                "size": obj["Size"],
+                "last_modified": obj["LastModified"].isoformat(),
+            })
+
 
     return objects
 
