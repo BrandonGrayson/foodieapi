@@ -1,4 +1,5 @@
 # NOTES & Bugs: 
+# update 
 # aws signature for images timesout and renders a 500 error to the client
 
 from typing import Annotated
@@ -102,8 +103,8 @@ async def upload_food_items(user_id: int = Depends(get_current_user), file: Uplo
     }
 
 
-@app.get('/listfoodieitems')
-def get_all_food_items(user_id: int = Depends(get_current_user)):
+@app.get('/listfoodieitems', response_model=list[schemas.FoodResponse])
+def get_all_food_items(session: SessionDep, user_id: int = Depends(get_current_user)):
 
     print("AWS_ACCESS_KEY_ID:", settings.AWS_ACCESS_KEY_ID)
     print("AWS_SECRET_ACCESS_KEY:", settings.AWS_SECRET_ACCESS_KEY)
@@ -117,7 +118,7 @@ def get_all_food_items(user_id: int = Depends(get_current_user)):
     
     prefix = f"users/{user_id}/"
 
-    bucket_name = "foodieitems"
+    bucket_name = settings.AWS_S3_BUCKET_NAME
 
     paginator = s3.get_paginator("list_objects_v2")
 
@@ -140,8 +141,21 @@ def get_all_food_items(user_id: int = Depends(get_current_user)):
                 "last_modified": obj["LastModified"].isoformat(),
             })
 
+    statement = select(Foods).where(Foods.user_id == user_id)
+    foods = session.exec(statement).all()
 
-    return objects
+    object_lookup = {obj["key"]: obj for obj in objects}
+    foods_and_key = [
+        {
+            **food.model_dump(),
+            "url": object_lookup[food.image_key]["url"],
+            "image_key": object_lookup[food.image_key]["key"]
+        }
+        for food in foods
+        if food.image_key in object_lookup
+    ]
+
+    return foods_and_key
 
 @app.post("/users", status_code=201, response_model=UserRead)
 def add_user(user: UserCreate, session: SessionDep):

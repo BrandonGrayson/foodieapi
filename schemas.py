@@ -38,6 +38,13 @@ class FoodCreate(FoodBase):
     class Config:
         from_attributes = True
 
+class FoodResponse(FoodBase):
+    id: int
+    created_at: datetime
+    url: str
+    user_id: int
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str
