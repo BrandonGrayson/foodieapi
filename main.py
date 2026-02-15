@@ -17,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import boto3
 import uuid
 from fastapi import UploadFile, File
+import models
 
 app = FastAPI()
 
@@ -64,6 +65,47 @@ def on_startup():
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
+
+@app.get("/food/likes/{food_id}")
+def get_food_Likes(food_id: int, session: SessionDep):
+
+    statement = select(models.FoodLikes).where(models.FoodLikes.id == food_id)
+    food_Likes = session.exec(statement).all()
+
+    return food_Likes
+
+@app.post("/foods/{food_id}/like", status_code=201)
+def add_food_Likes(food_id: int, session: SessionDep, user_id: int = Depends(get_current_user)):
+
+    food = session.get(Foods, food_id)
+
+    if not food:
+        raise HTTPException(404, "Food not found")
+    
+    existing = session.exec(
+        select(models.FoodLikes).where(models.FoodLikes.food_id == food_id, models.FoodLikes.user_id == user_id)
+    ).first()
+
+    if existing:
+        raise HTTPException(409, "Already liked")
+
+    food_likes = models.FoodLikes(food_id=food_id, user_id=user_id)
+
+    session.add(food_likes)
+    session.commit()
+    session.refresh(food_likes)
+
+    return food_likes
+
+@app.get("/comments/{food_id}")
+def get_comments(food_id: int, session: SessionDep):
+
+    statement = select(models.Comments).where(models.Comments.id == food_id)
+    comments = session.exec(statement).all()
+
+    return comments
+
+
 
 @app.post('/uploadfood')
 async def upload_food_items(user_id: int = Depends(get_current_user), file: UploadFile = File()):
@@ -237,8 +279,8 @@ def login(user_credentials: Annotated[OAuth2PasswordRequestForm, Depends()], ses
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=False,     # ✅ dev only
-        samesite="lax",   # ✅ SAME SITE = localhost
+        secure=False,   
+        samesite="lax",   
         max_age=60 * 30,
         path="/"
     )

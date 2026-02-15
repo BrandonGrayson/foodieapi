@@ -12,9 +12,6 @@ class UserBase(BaseModel):
     class Config:
         from_attributes = True
 
-# class User(UserBase):
-#     hashed_password: str
-
 class UserOut(BaseModel):
     id: int
     email: EmailStr
@@ -22,7 +19,6 @@ class UserOut(BaseModel):
 
     class Config:
         from_attributes = True
-
 
 class FoodBase(BaseModel):
     name: str
@@ -44,7 +40,6 @@ class FoodResponse(FoodBase):
     url: str
     user_id: int
 
-
 class Token(BaseModel):
     access_token: str
     token_type: str
@@ -54,3 +49,4 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     id: Optional[int] = None
+

@@ -1,7 +1,7 @@
 from sqlmodel import Field, SQLModel
 from pydantic import EmailStr
 from datetime import datetime
-from sqlalchemy import Column, DateTime, func
+from sqlalchemy import Column, DateTime, func, UniqueConstraint
 
 class UserCreate(SQLModel):
     email: EmailStr
@@ -64,3 +64,32 @@ class FoodRead(SQLModel):
             server_default=func.now()
         )
     ) 
+
+class Comments(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    food_id: int = Field(foreign_key="foods.id")
+    user_id: int = Field(foreign_key="users.id")
+    text: str
+    created_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(
+            DateTime(timezone=True),
+            server_default=func.now()
+        )
+    )
+
+class FoodLikes(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    food_id: int = Field(foreign_key="foods.id")
+    user_id: int = Field(foreign_key="users.id")
+    created_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(
+            DateTime(timezone=True),
+            server_default=func.now()
+        )
+    )
+    __table_args__ = (
+        UniqueConstraint("food_id", "user_id"),
+    )
+
