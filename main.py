@@ -97,10 +97,14 @@ def add_food_Likes(food_id: int, session: SessionDep, user_id: int = Depends(get
 
     return food_likes
 
-@app.get("/comments/{food_id}")
-def get_comments(food_id: int, session: SessionDep):
+@app.get("/foods/{food_id}/comments", response_model=list[schemas.CommentRead])
+def get_comments(food_id: int, session: SessionDep, limit: int = 20, offset: int = 0):
 
-    statement = select(models.Comments).where(models.Comments.id == food_id)
+    food = session.get(Foods, food_id)
+    if not food:
+        raise HTTPException(404, "Food not found")
+
+    statement = select(models.Comments).where(models.Comments.food_id == food_id).order_by(models.Comments.created_at.desc()).limit(limit).offset(offset)
     comments = session.exec(statement).all()
 
     return comments
