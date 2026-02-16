@@ -12,6 +12,11 @@ class FoodLikesResponse(SQLModel):
     class Config:
         from_attributes = True
 
+class CommentCreate(SQLModel):
+    text: str
+    class Config:
+        from_attributes = True
+
 class CommentRead(SQLModel):
     id: int
     food_id: int

@@ -65,6 +65,21 @@ def read_root():
     return {"Hello": "World"}
 
 
+@app.post('/foods/comments/{food_id}', response_model=schemas.CommentRead, status_code=201)
+def add_comment(food_id: int, comment_in: schemas.CommentCreate, session: SessionDep, user_id: int = Depends(get_current_user)):
+    food = session.get(Foods, food_id)
+
+    if not food: 
+        raise HTTPException(404, "Food not found")
+    
+    comment = models.Comments(food_id=food_id, user_id=user_id, text=comment_in.text)
+    session.add(comment)
+    session.commit()
+    session.refresh(comment)
+
+    return comment
+
+
 @app.get("/foods/likes/{food_id}", response_model=list[schemas.FoodLikesResponse])
 def get_food_Likes(food_id: int, session: SessionDep):
 
@@ -263,7 +278,6 @@ def delete_food(id: int, session: SessionDep, user_id: int = Depends(get_current
 @app.post("/login")
 def login(user_credentials: Annotated[OAuth2PasswordRequestForm, Depends()], session: SessionDep, response: Response):
    
-
    print('user creds', user_credentials)
 
    statement = select(Users).where(Users.email == user_credentials.username)
