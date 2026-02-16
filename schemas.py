@@ -3,6 +3,14 @@ from datetime import datetime
 from typing import Optional
 from sqlmodel import Field, SQLModel
 
+class FoodLikesResponse(SQLModel):
+    id: int 
+    food_id: int 
+    user_id: int 
+    created_at: datetime 
+
+    class Config:
+        from_attributes = True
 
 class CommentRead(SQLModel):
     id: int
@@ -13,8 +21,6 @@ class CommentRead(SQLModel):
 
     class Config:
         from_attributes = True
-
-
 
 class LoginResponse(BaseModel):
     message: str

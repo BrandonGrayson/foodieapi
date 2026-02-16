@@ -1,6 +1,5 @@
 # NOTES & Bugs: 
 # update 
-# aws signature for images timesout and renders a 500 error to the client
 
 from typing import Annotated
 from fastapi import FastAPI
@@ -57,7 +56,6 @@ def get_current_user(access_token: str | None = Cookie(default=None)):
 
     return oauth.verify_access_token(access_token, credentials_exception)
 
-
 @app.on_event("startup")
 def on_startup():
     create_db_and_tables()
@@ -66,15 +64,16 @@ def on_startup():
 def read_root():
     return {"Hello": "World"}
 
-@app.get("/food/likes/{food_id}")
+
+@app.get("/foods/likes/{food_id}", response_model=list[schemas.FoodLikesResponse])
 def get_food_Likes(food_id: int, session: SessionDep):
 
-    statement = select(models.FoodLikes).where(models.FoodLikes.id == food_id)
+    statement = select(models.FoodLikes).where(models.FoodLikes.food_id == food_id)
     food_Likes = session.exec(statement).all()
 
     return food_Likes
 
-@app.post("/foods/{food_id}/like", status_code=201)
+@app.post("/foods/{food_id}/like", status_code=201, response_model=schemas.FoodLikesResponse)
 def add_food_Likes(food_id: int, session: SessionDep, user_id: int = Depends(get_current_user)):
 
     food = session.get(Foods, food_id)
@@ -108,8 +107,6 @@ def get_comments(food_id: int, session: SessionDep, limit: int = 20, offset: int
     comments = session.exec(statement).all()
 
     return comments
-
-
 
 @app.post('/uploadfood')
 async def upload_food_items(user_id: int = Depends(get_current_user), file: UploadFile = File()):
@@ -266,6 +263,7 @@ def delete_food(id: int, session: SessionDep, user_id: int = Depends(get_current
 @app.post("/login")
 def login(user_credentials: Annotated[OAuth2PasswordRequestForm, Depends()], session: SessionDep, response: Response):
    
+
    print('user creds', user_credentials)
 
    statement = select(Users).where(Users.email == user_credentials.username)
@@ -278,6 +276,8 @@ def login(user_credentials: Annotated[OAuth2PasswordRequestForm, Depends()], ses
        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid Credentials")
    
    access_token = oauth.create_access_token(data = {"user_id": user.id})
+
+   print('accessToken---->', access_token)
    
    response.set_cookie(
         key="access_token",
