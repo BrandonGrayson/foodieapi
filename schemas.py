@@ -13,7 +13,7 @@ class FoodLikesResponse(SQLModel):
         from_attributes = True
 
 class CommentCreate(SQLModel):
-    text: str
+    text: str = Field(min_length=1, max_length=500)
 
 class CommentRead(SQLModel):
     id: int
