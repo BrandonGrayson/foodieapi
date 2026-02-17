@@ -65,10 +65,15 @@ def on_startup():
 def read_root():
     return {"Hello": "World"}
 
-@app.get('/users/{user_followers_id}/followers')
-def get_all_followers(user_followers_id: int):
 
-    return user_followers_id 
+@app.get('/users/{user_followers_id}/followers', status_code=200, response_model=list[schemas.UserFollowResponse])
+def get_all_followers(user_followers_id: int, session: SessionDep):
+
+    statement = select(models.UserFollow).where(models.UserFollow.following_id == user_followers_id)
+    followers = session.exec(statement).all()
+
+    return followers 
+
 
 @app.post('/users/{user_to_follow_id}/follow', status_code=201, response_model=schemas.UserFollowResponse)
 def add_follower(user_to_follow_id :int, session: SessionDep, user_id: int = Depends(get_current_user)):
