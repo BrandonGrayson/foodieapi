@@ -93,3 +93,20 @@ class FoodLikes(SQLModel, table=True):
         UniqueConstraint("food_id", "user_id"),
     )
 
+class UserFollow(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    follower_id: int = Field(foreign_key="users.id")
+    following_id: int = Field(foreign_key="users.id")
+    created_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(
+            DateTime(timezone=True),
+            server_default=func.now()
+        )
+    )
+
+    __table_args__ = (
+    UniqueConstraint("follower_id", "following_id"),
+)
+
+

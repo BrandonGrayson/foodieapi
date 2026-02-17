@@ -1,5 +1,6 @@
 # NOTES & Bugs: 
-# update 
+# confirm get comments works
+# allow users to follow other users....
 
 from typing import Annotated
 from fastapi import FastAPI
@@ -64,6 +65,36 @@ def on_startup():
 def read_root():
     return {"Hello": "World"}
 
+@app.get('/users/{user_followers_id}/followers')
+def get_all_followers(user_followers_id: int):
+
+    return user_followers_id 
+
+@app.post('/users/{user_to_follow_id}/follow', status_code=201, response_model=schemas.UserFollowResponse)
+def add_follower(user_to_follow_id :int, session: SessionDep, user_id: int = Depends(get_current_user)):
+
+    if user_to_follow_id == user_id:
+        raise HTTPException(400, "You cannot follow yourself")
+    
+    user = session.get(Users, user_to_follow_id)
+
+    if not user: 
+        raise HTTPException(404, "user not found")
+    
+    existing = session.exec(
+        select(models.UserFollow).where(models.UserFollow.follower_id == user_id, models.UserFollow.following_id == user_to_follow_id)
+    ).first()
+
+    if existing:
+        raise HTTPException(409, "Already Following this user")
+    
+    new_follower = models.UserFollow(follower_id=user_id, following_id=user_to_follow_id)
+
+    session.add(new_follower)
+    session.commit()
+    session.refresh(new_follower)
+
+    return new_follower
 
 @app.post('/foods/comments/{food_id}', response_model=schemas.CommentRead, status_code=201)
 def add_comment(food_id: int, comment_in: schemas.CommentCreate, session: SessionDep, user_id: int = Depends(get_current_user)):
