@@ -3,22 +3,17 @@ from pydantic import EmailStr
 from datetime import datetime
 from sqlalchemy import Column, DateTime, func, UniqueConstraint
 
-class UserCreate(SQLModel):
-    email: EmailStr
-    password: str
-    full_name: str
-    phone_number: str
-    user_name: str
-
-class UserRead(SQLModel):
-    id: int
-    email: EmailStr
-    user_name: str
-    created_at: datetime
+class FavoriteFood(SQLModel, table=True):
+    user_id: int = Field(foreign_key="users.id", primary_key=True, index=True)
+    food_id: int = Field(foreign_key="foods.id", primary_key=True, index=True)
+    created_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), server_default=func.now())
+    )
 
 class Users(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    email: EmailStr
+    email: EmailStr = Field(index=True, unique=True)
     password: str
     created_at: datetime | None = Field(
         default=None,
@@ -29,7 +24,7 @@ class Users(SQLModel, table=True):
     ) 
     phone_number: str
     full_name: str
-    user_name: str
+    user_name: str = Field(index=True, unique=True)
 
 class Foods(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
@@ -46,29 +41,14 @@ class Foods(SQLModel, table=True):
         )
     ) 
     image_key: str
-    user_id: int = Field(default=None, foreign_key="users.id")
+    user_id: int = Field(foreign_key="users.id", index=True)
 
-class FoodRead(SQLModel):
-    id: int | None = Field(default=None, primary_key=True)
-    name: str
-    description: str
-    location: str
-    type: str
-    grade: int
-    image_key: str
-    user_id: int = Field(default=None, foreign_key="user.id")
-    created_at: datetime | None = Field(
-        default=None,
-        sa_column=Column(
-            DateTime(timezone=True),
-            server_default=func.now()
-        )
-    ) 
+
 
 class Comments(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    food_id: int = Field(foreign_key="foods.id")
-    user_id: int = Field(foreign_key="users.id")
+    food_id: int = Field(foreign_key="foods.id", index=True)
+    user_id: int = Field(foreign_key="users.id", index=True)
     text: str
     created_at: datetime | None = Field(
         default=None,
@@ -79,24 +59,20 @@ class Comments(SQLModel, table=True):
     )
 
 class FoodLikes(SQLModel, table=True):
-    id: int | None = Field(default=None, primary_key=True)
-    food_id: int = Field(foreign_key="foods.id")
-    user_id: int = Field(foreign_key="users.id")
+    food_id: int = Field(foreign_key="foods.id", primary_key=True, index=True)
+    user_id: int = Field(foreign_key="users.id", primary_key=True, index=True)
     created_at: datetime | None = Field(
         default=None,
         sa_column=Column(
             DateTime(timezone=True),
             server_default=func.now()
         )
-    )
-    __table_args__ = (
-        UniqueConstraint("food_id", "user_id"),
     )
 
 class UserFollow(SQLModel, table=True):
-    id: int | None = Field(default=None, primary_key=True)
-    follower_id: int = Field(foreign_key="users.id")
-    following_id: int = Field(foreign_key="users.id")
+    # id: int | None = Field(default=None, primary_key=True)
+    follower_id: int = Field(foreign_key="users.id", primary_key=True, index=True)
+    following_id: int = Field(foreign_key="users.id", primary_key=True, index=True)
     created_at: datetime | None = Field(
         default=None,
         sa_column=Column(
@@ -104,9 +80,4 @@ class UserFollow(SQLModel, table=True):
             server_default=func.now()
         )
     )
-
-    __table_args__ = (
-    UniqueConstraint("follower_id", "following_id"),
-)
-
 

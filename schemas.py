@@ -1,10 +1,37 @@
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
 from typing import Optional
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, SQLModel, Column
+
+class UserCreate(SQLModel):
+    email: EmailStr
+    password: str
+    full_name: str
+    phone_number: str
+    user_name: str
+
+class UserRead(SQLModel):
+    id: int
+    email: EmailStr
+    user_name: str
+    created_at: datetime
+
+class FoodRead(SQLModel):
+    id: int | None = Field(default=None, primary_key=True)
+    name: str
+    description: str
+    location: str
+    type: str
+    grade: int
+    image_key: str
+    user_id: int 
+    created_at: datetime 
+
+    class Config:
+        from_attributes = True
 
 class UserFollowResponse(SQLModel):
-    id: int
+    # id: int
     follower_id: int
     following_id: int
     created_at: datetime
@@ -12,8 +39,16 @@ class UserFollowResponse(SQLModel):
     class Config:
         from_attributes = True
 
+class FavoritesResponse(SQLModel):
+    food_id: int 
+    user_id: int 
+    created_at: datetime 
+
+    class Config:
+        from_attributes = True
+
 class FoodLikesResponse(SQLModel):
-    id: int 
+    # id: int 
     food_id: int 
     user_id: int 
     created_at: datetime 
@@ -25,7 +60,7 @@ class CommentCreate(SQLModel):
     text: str = Field(min_length=1, max_length=500)
 
 class CommentRead(SQLModel):
-    id: int
+    # id: int
     food_id: int
     user_id: int
     text: str

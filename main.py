@@ -5,7 +5,7 @@
 from typing import Annotated
 from fastapi import FastAPI
 from fastapi import HTTPException, status
-from models import Users, UserCreate, UserRead, FoodRead, Foods
+from models import Users, Foods
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi import Depends, FastAPI, HTTPException, Cookie, Response
 from sqlmodel import Session, SQLModel, create_engine, select
@@ -65,6 +65,30 @@ def on_startup():
 def read_root():
     return {"Hello": "World"}
 
+@app.post('/foods/{food_id}/favorites', status_code=201, response_model=schemas.FavoritesResponse)
+def add_favorites(food_id: int, session: SessionDep, user_id: int = Depends(get_current_user)):
+
+    food = session.get(Foods, food_id)
+
+    if not food:
+        raise HTTPException(404, "Food not found")
+    
+    existing = session.exec(
+        select(models.FavoriteFood).where(
+            models.FavoriteFood.user_id == user_id,
+            models.FavoriteFood.food_id == food_id
+        )
+    ).first()
+
+    if existing:
+        raise HTTPException(409, "Already in favorites")
+    
+    favorite = models.FavoriteFood(user_id=user_id, food_id=food_id)
+    session.add(favorite)
+    session.commit()
+    session.refresh(favorite)
+
+    return favorite
 
 @app.get('/users/{user_followers_id}/followers', status_code=200, response_model=list[schemas.UserFollowResponse])
 def get_all_followers(user_followers_id: int, session: SessionDep):
@@ -159,7 +183,7 @@ def get_comments(food_id: int, session: SessionDep, limit: int = 20, offset: int
 
     return comments
 
-@app.post('/uploadfood')
+@app.post('/uploadfood/image')
 async def upload_food_items(user_id: int = Depends(get_current_user), file: UploadFile = File()):
 
     print("AWS_ACCESS_KEY_ID:", settings.AWS_ACCESS_KEY_ID)
@@ -251,8 +275,8 @@ def get_all_food_items(session: SessionDep, user_id: int = Depends(get_current_u
 
     return foods_and_key
 
-@app.post("/users", status_code=201, response_model=UserRead)
-def add_user(user: UserCreate, session: SessionDep):
+@app.post("/users", status_code=201, response_model=schemas.UserRead)
+def add_user(user: schemas.UserCreate, session: SessionDep):
 
     hashed_password = utils.hash(user.password)
 
@@ -264,7 +288,7 @@ def add_user(user: UserCreate, session: SessionDep):
 
     return db_user
 
-@app.get('/users/{id}', status_code=200, response_model=UserRead)
+@app.get('/users/{id}', status_code=200, response_model=schemas.UserRead)
 def get_user(id: int, session: SessionDep, user_id: int = Depends(get_current_user)):
     
     statement = select(Users).where(Users.id == id)
@@ -276,7 +300,7 @@ def get_user(id: int, session: SessionDep, user_id: int = Depends(get_current_us
     return user
     
 
-@app.post("/foods", status_code=201, response_model=FoodRead)
+@app.post("/foods", status_code=201, response_model=schemas.FoodRead)
 def add_food(food: schemas.FoodCreate, session: SessionDep, user_id: int = Depends(get_current_user)):
 
     print(user_id)
@@ -289,7 +313,7 @@ def add_food(food: schemas.FoodCreate, session: SessionDep, user_id: int = Depen
 
     return db_Foods
 
-@app.get('/foods/{id}', status_code=200, response_model=FoodRead)
+@app.get('/foods/{id}', status_code=200, response_model=schemas.FoodRead)
 def get_foods(id: int, session: SessionDep, user_id: int = Depends(get_current_user)):
 
     statement = select(Foods).where(Foods.id == id)
@@ -341,7 +365,7 @@ def login(user_credentials: Annotated[OAuth2PasswordRequestForm, Depends()], ses
    
    return {"message": "Login successful"}
 
-@app.get("/me", response_model=UserRead)
+@app.get("/me", response_model=schemas.UserRead)
 def read_me(
     session: SessionDep,
     user_id: int = Depends(get_current_user)
