@@ -15,6 +15,7 @@ class UserRead(SQLModel):
     email: EmailStr
     user_name: str
     created_at: datetime
+    full_name: str
 
 class FoodRead(SQLModel):
     id: int | None = Field(default=None, primary_key=True)
