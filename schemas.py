@@ -3,6 +3,10 @@ from datetime import datetime
 from typing import Optional
 from sqlmodel import Field, SQLModel, Column
 
+class UserFollowersRead(SQLModel):
+    following_id: int
+    created_at: datetime
+
 class UserCreate(SQLModel):
     email: EmailStr
     password: str

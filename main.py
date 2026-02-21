@@ -90,14 +90,15 @@ def add_favorites(food_id: int, session: SessionDep, user_id: int = Depends(get_
 
     return favorite
 
-@app.get('/users/{user_followers_id}/followers', status_code=200, response_model=list[schemas.UserFollowResponse])
-def get_all_followers(user_followers_id: int, session: SessionDep):
+@app.get('/users/followers', status_code=200, response_model=list[schemas.UserFollowersRead])
+def get_all_followers(session: SessionDep, user_id: int = Depends(get_current_user)):
 
-    statement = select(models.UserFollow).where(models.UserFollow.following_id == user_followers_id)
+    print("user_id", user_id)
+
+    statement = select(models.UserFollow).where(models.UserFollow.following_id == user_id)
     followers = session.exec(statement).all()
 
     return followers 
-
 
 @app.post('/users/{user_to_follow_id}/follow', status_code=201, response_model=schemas.UserFollowResponse)
 def add_follower(user_to_follow_id :int, session: SessionDep, user_id: int = Depends(get_current_user)):
@@ -219,7 +220,6 @@ async def upload_food_items(user_id: int = Depends(get_current_user), file: Uplo
         "key": key,
         "url": f"https://{settings.AWS_S3_BUCKET_NAME}.s3.amazonaws.com/{key}"
     }
-
 
 @app.get('/listfoodieitems', response_model=list[schemas.FoodResponse])
 def get_all_food_items(session: SessionDep, user_id: int = Depends(get_current_user)):
@@ -363,7 +363,7 @@ def login(user_credentials: Annotated[OAuth2PasswordRequestForm, Depends()], ses
         path="/"
     )
    
-   return {"message": "Login successful"}
+   return {"accessToken": access_token}
 
 @app.get("/me", response_model=schemas.UserRead)
 def read_me(
