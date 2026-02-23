@@ -90,6 +90,16 @@ def add_favorites(food_id: int, session: SessionDep, user_id: int = Depends(get_
 
     return favorite
 
+@app.get('/users/following', status_code=200, response_model=list[schemas.UserFollowersRead])
+def get_all_following(session: SessionDep, user_id: int = Depends(get_current_user)):
+
+    print("user_id", user_id)
+
+    statement = select(models.UserFollow).where(models.UserFollow.follower_id == user_id)
+    following = session.exec(statement).all()
+
+    return following 
+
 @app.get('/users/followers', status_code=200, response_model=list[schemas.UserFollowersRead])
 def get_all_followers(session: SessionDep, user_id: int = Depends(get_current_user)):
 

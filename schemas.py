@@ -5,6 +5,7 @@ from sqlmodel import Field, SQLModel, Column
 
 class UserFollowersRead(SQLModel):
     following_id: int
+    follower_id: int
     created_at: datetime
 
 class UserCreate(SQLModel):
