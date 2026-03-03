@@ -65,6 +65,17 @@ def on_startup():
 def read_root():
     return {"Hello": "World"}
 
+@app.get('/foods/favorites', status_code=200,)
+def get_all_favorites(session: SessionDep, user_id: int = Depends(get_current_user)):
+
+    if not user_id:
+         raise HTTPException(400, "You are not logged in")
+
+    statement = select(Foods, models.FavoriteFoods).join(models.FavoriteFoods, models.FavoriteFoods.food_id == Foods.id).where(models.FavoriteFoods.user_id == user_id)
+    favoriteFoods = session.exec(statement)
+
+    return favoriteFoods
+
 @app.post('/foods/{food_id}/favorites', status_code=201, response_model=schemas.FavoritesResponse)
 def add_favorites(food_id: int, session: SessionDep, user_id: int = Depends(get_current_user)):
 
@@ -74,16 +85,16 @@ def add_favorites(food_id: int, session: SessionDep, user_id: int = Depends(get_
         raise HTTPException(404, "Food not found")
     
     existing = session.exec(
-        select(models.FavoriteFood).where(
-            models.FavoriteFood.user_id == user_id,
-            models.FavoriteFood.food_id == food_id
+        select(models.FavoriteFoods).where(
+            models.FavoriteFoods.user_id == user_id,
+            models.FavoriteFoods.food_id == food_id
         )
     ).first()
 
     if existing:
         raise HTTPException(409, "Already in favorites")
     
-    favorite = models.FavoriteFood(user_id=user_id, food_id=food_id)
+    favorite = models.FavoriteFoods(user_id=user_id, food_id=food_id)
     session.add(favorite)
     session.commit()
     session.refresh(favorite)
@@ -149,7 +160,6 @@ def add_comment(food_id: int, comment_in: schemas.CommentCreate, session: Sessio
     session.refresh(comment)
 
     return comment
-
 
 @app.get("/foods/likes/{food_id}", response_model=list[schemas.FoodLikesResponse])
 def get_food_Likes(food_id: int, session: SessionDep):
@@ -309,7 +319,6 @@ def get_user(id: int, session: SessionDep, user_id: int = Depends(get_current_us
 
     return user
     
-
 @app.post("/foods", status_code=201, response_model=schemas.FoodRead)
 def add_food(food: schemas.FoodCreate, session: SessionDep, user_id: int = Depends(get_current_user)):
 

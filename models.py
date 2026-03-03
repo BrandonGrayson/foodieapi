@@ -3,7 +3,7 @@ from pydantic import EmailStr
 from datetime import datetime
 from sqlalchemy import Column, DateTime, func, UniqueConstraint
 
-class FavoriteFood(SQLModel, table=True):
+class FavoriteFoods(SQLModel, table=True):
     user_id: int = Field(foreign_key="users.id", primary_key=True, index=True)
     food_id: int = Field(foreign_key="foods.id", primary_key=True, index=True)
     created_at: datetime | None = Field(
