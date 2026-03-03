@@ -72,7 +72,7 @@ def get_all_favorites(session: SessionDep, user_id: int = Depends(get_current_us
          raise HTTPException(400, "You are not logged in")
 
     statement = select(Foods, models.FavoriteFoods).join(models.FavoriteFoods, models.FavoriteFoods.food_id == Foods.id).where(models.FavoriteFoods.user_id == user_id)
-    favoriteFoods = session.exec(statement)
+    favoriteFoods = session.exec(statement).all()
 
     return favoriteFoods
 
@@ -204,7 +204,7 @@ def get_comments(food_id: int, session: SessionDep, limit: int = 20, offset: int
 
     return comments
 
-@app.post('/uploadfood/image')
+@app.post('/food/upload')
 async def upload_food_items(user_id: int = Depends(get_current_user), file: UploadFile = File()):
 
     print("AWS_ACCESS_KEY_ID:", settings.AWS_ACCESS_KEY_ID)
@@ -330,7 +330,10 @@ def add_food(food: schemas.FoodCreate, session: SessionDep, user_id: int = Depen
     session.commit()
     session.refresh(db_Foods)
 
-    return db_Foods
+    return {
+    **db_Foods.model_dump(),
+    "url": f"https://{settings.AWS_S3_BUCKET_NAME}.s3.amazonaws.com/{db_Foods.image_key}"
+}
 
 @app.get('/foods/{id}', status_code=200, response_model=schemas.FoodRead)
 def get_foods(id: int, session: SessionDep, user_id: int = Depends(get_current_user)):

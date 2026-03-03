@@ -32,6 +32,7 @@ class FoodRead(SQLModel):
     image_key: str
     user_id: int 
     created_at: datetime 
+    url: str
 
     class Config:
         from_attributes = True
