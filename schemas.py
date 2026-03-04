@@ -1,7 +1,8 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, computed_field
 from datetime import datetime
 from typing import Optional
-from sqlmodel import Field, SQLModel, Column
+from sqlmodel import Field, SQLModel
+from config import settings
 
 class UserFollowersRead(SQLModel):
     following_id: int
@@ -23,7 +24,7 @@ class UserRead(SQLModel):
     full_name: str
 
 class FoodRead(SQLModel):
-    id: int | None = Field(default=None, primary_key=True)
+    id: int 
     name: str
     description: str
     location: str
@@ -32,7 +33,11 @@ class FoodRead(SQLModel):
     image_key: str
     user_id: int 
     created_at: datetime 
-    url: str
+
+    @computed_field
+    @property
+    def url(self) -> str:
+        return f"https://{settings.AWS_S3_BUCKET_NAME}.s3.amazonaws.com/{self.image_key}"
 
     class Config:
         from_attributes = True

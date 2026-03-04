@@ -330,10 +330,7 @@ def add_food(food: schemas.FoodCreate, session: SessionDep, user_id: int = Depen
     session.commit()
     session.refresh(db_Foods)
 
-    return {
-    **db_Foods.model_dump(),
-    "url": f"https://{settings.AWS_S3_BUCKET_NAME}.s3.amazonaws.com/{db_Foods.image_key}"
-}
+    return db_Foods
 
 @app.get('/foods/{id}', status_code=200, response_model=schemas.FoodRead)
 def get_foods(id: int, session: SessionDep, user_id: int = Depends(get_current_user)):
