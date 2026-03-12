@@ -75,8 +75,16 @@ class FavoritesResponse(SQLModel):
 class FoodLikesResponse(SQLModel):
     # id: int 
     food_id: int 
-    user_id: int 
-    created_at: datetime 
+    # user_id: int 
+    # created_at: datetime 
+
+    model_config = ConfigDict(from_attributes=True)
+
+class ToggleLikesResponse(SQLModel):
+    # id: int 
+    food_id: int 
+    # user_id: int 
+    # created_at: datetime 
 
     model_config = ConfigDict(from_attributes=True)
 

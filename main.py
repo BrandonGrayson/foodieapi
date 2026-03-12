@@ -161,16 +161,16 @@ def add_comment(food_id: int, comment_in: schemas.CommentCreate, session: Sessio
 
     return comment
 
-@app.get("/foods/likes/{food_id}", response_model=list[schemas.FoodLikesResponse])
-def get_food_Likes(food_id: int, session: SessionDep):
+@app.get("/foods/likes", response_model=list[schemas.FoodLikesResponse])
+def get_food_Likes(session: SessionDep, user_id: int = Depends(get_current_user)):
 
-    statement = select(models.FoodLikes).where(models.FoodLikes.food_id == food_id)
+    statement = select(models.FoodLikes).where(models.FoodLikes.user_id == user_id)
     food_Likes = session.exec(statement).all()
 
     return food_Likes
 
-@app.post("/foods/{food_id}/like", status_code=201, response_model=schemas.FoodLikesResponse)
-def add_food_Likes(food_id: int, session: SessionDep, user_id: int = Depends(get_current_user)):
+@app.post("/foods/{food_id}/like", status_code=201, response_model=schemas.ToggleLikesResponse)
+def toggle_food_Likes(food_id: int, session: SessionDep, user_id: int = Depends(get_current_user)):
 
     food = session.get(Foods, food_id)
 
@@ -182,15 +182,17 @@ def add_food_Likes(food_id: int, session: SessionDep, user_id: int = Depends(get
     ).first()
 
     if existing:
-        raise HTTPException(409, "Already liked")
-
+        session.delete(existing)
+        session.commit()
+        return {"status": "unliked", "food_id": food_id}
+    
     food_likes = models.FoodLikes(food_id=food_id, user_id=user_id)
 
     session.add(food_likes)
     session.commit()
     session.refresh(food_likes)
 
-    return food_likes
+    return {"status": "liked", "food_id": food_id}
 
 @app.get("/foods/{food_id}/comments", response_model=list[schemas.CommentRead])
 def get_comments(food_id: int, session: SessionDep, limit: int = 20, offset: int = 0):
